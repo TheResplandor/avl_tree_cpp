@@ -1,0 +1,45 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "cmake debug build project",
+            "command": "C:/Program Files/CMake/bin/cmake.exe",
+            "args": [
+                "--build",
+                "."
+            ],
+            "options": {
+                "cwd": "${fileDirname}/debug"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "detail": "compiler: C:\\Program Files\\LLVM\\bin\\clang++.exe"
+        },
+        {
+            "type": "cppbuild",
+            "label": "cmake release build project",
+            "command": "C:/Program Files/CMake/bin/cmake.exe",
+            "args": [
+                "--build",
+                "."
+            ],
+            "options": {
+                "cwd": "${fileDirname}/release"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "detail": "compiler: C:\\Program Files\\LLVM\\bin\\clang++.exe"
+        }
+    ]
+}

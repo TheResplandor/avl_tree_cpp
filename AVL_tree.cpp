@@ -88,9 +88,9 @@ bool AVL_tree::AVL_node::operator<(const AVL_node& other) const
 
 void AVL_tree::add(std::pair<uint16_t, uint16_t> const& value)
 {
-    AVL_node* new_node = new AVL_node(value);
-    AVL_node* node = nullptr;
-    AVL_node* parent = nullptr;
+    std::unique_ptr<AVL_node> new_node = std::make_unique<AVL_node>(value);
+    AVL_node const* node = nullptr;
+    AVL_node const* parent = nullptr;
 
     if (nullptr == this->m_head) {
         this->m_head = new_node;
@@ -121,7 +121,7 @@ AVL_tree::avl_status AVL_tree::remove(std::pair<uint16_t, uint16_t> const& value
     /* to_remove has 2 children - swap its value with its minimal bigger child's value and remove
     the child. */
     if ((nullptr != to_remove->right()) && (nullptr != to_remove->left())) {
-        to_remove->right()->find_min(replacement);
+        to_remove->right()->find_min(replacement); // TODO define replacement as unique_ptr
 
         auto tmp_value = to_remove->value();
         to_remove->value(replacement->value());
@@ -171,7 +171,7 @@ bool AVL_tree::is_inside(std::pair<uint16_t, uint16_t> const& value) const
     return nullptr != node;
 }
 
-size_t AVL_tree::AVL_node::get_height(AVL_tree::AVL_node const* node)
+size_t AVL_tree::AVL_node::get_height(std::unique_ptr<AVL_tree::AVL_node const> node)
 {
     if (nullptr == node) {
         return 0;
@@ -260,6 +260,7 @@ AVL_tree::AVL_node::node_status AVL_tree::AVL_node::print_nth_depth(
 
 void AVL_tree::print_tree()
 {
+    // TODO change this to work with unique_ptr. probably just pass raw pointer.
     size_t height = AVL_node::get_height(this->m_head);
 
     for (size_t i = 0; i < height; ++i) {

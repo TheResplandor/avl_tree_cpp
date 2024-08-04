@@ -8,9 +8,10 @@ Purpose:    AVL_tree class declaration.
 /*** Headers ***/
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
-#include <stddef.h>
-#include <stdint.h>
+#include <memory>
 #include <utility>
 
 /*** Classes ***/
@@ -24,7 +25,7 @@ public:
 
     AVL_tree() = default;
     AVL_tree(std::pair<uint16_t, uint16_t> const& head_value):
-        m_head(new AVL_node(head_value, nullptr, nullptr, nullptr))
+        std::make_unique<AVL_node>(head_value, nullptr, nullptr, nullptr)
     {
     }
 
@@ -102,7 +103,7 @@ private:
         std::pair<uint16_t, uint16_t> const* m_value;
     };
 
-    AVL_node* m_head = nullptr;
+    std::unique_ptr<AVL_node> m_head = nullptr;
 };
 
 #endif // __AVL_TREE_H__

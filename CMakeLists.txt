@@ -22,7 +22,7 @@ project(
 # Other common choices are STATIC, SHARED, and MODULE
 # Including header files here helps IDEs but is not required.
 # Output libname matches target name, with the usual extensions on your system
-add_library(AVL_tree AVL_tree.cpp AVL_tree.hpp)
+add_library(AVL_tree AVL_tree.hpp)
 
 # Link each target with other targets or add options, etc.
 

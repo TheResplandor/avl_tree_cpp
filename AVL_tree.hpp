@@ -12,6 +12,7 @@ Purpose:    AVL_tree class declaration.
 #include <iostream>
 #include <memory>
 #include <utility>
+#include <vector>
 
 const char FILLER_CHAR = ' ';
 const char BRANCH_CHAR = '_';
@@ -27,7 +28,7 @@ template <typename T>
 class AVL_tree {
 public:
     AVL_tree() = default;
-    AVL_tree(T const& head_value):
+    explicit AVL_tree(T const& head_value):
         m_head(std::make_unique<AVL_node>(head_value, nullptr, nullptr))
     {
     }
@@ -107,7 +108,7 @@ public:
         return avl_statuses::SUCCESS;
     }
 
-    bool is_inside(T const& value) const
+    bool contains(T const& value) const
     {
         AVL_node* parent;
         AVL_node* node;
@@ -154,6 +155,41 @@ private:
         AVL_node(T const& value):
             AVL_node(value, nullptr, nullptr)
         {
+        }
+
+        /**
+         * @brief BFS cleanup of the subtree,
+         *
+         * This is to avoid stack overflows caused by unique_ptr's destructor
+         * for long subtrees.
+         */
+        ~AVL_node()
+        {
+            std::vector<std::unique_ptr<AVL_node>> nodes {};
+            std::unique_ptr<AVL_node> current = nullptr;
+
+            // Reserve some initial space to avoid re-allocations at first.
+            nodes.reserve(100);
+
+            if (m_smaller != nullptr) {
+                nodes.push_back(std::move(m_smaller));
+            }
+            if (m_bigger != nullptr) {
+                nodes.push_back(std::move(m_bigger));
+            }
+
+            while (nodes.size() != 0) {
+                auto final_node_it = std::prev(nodes.end());
+                current = std::move(*final_node_it);
+                nodes.erase(final_node_it);
+
+                if (current->m_smaller != nullptr) {
+                    nodes.push_back(std::move(current->m_smaller));
+                }
+                if (current->m_bigger != nullptr) {
+                    nodes.push_back(std::move(current->m_bigger));
+                }
+            }
         }
 
         /**

@@ -39,14 +39,14 @@ int main()
     }
 
     for (size_t i = 0; i < sizeof(chars1) / sizeof(char); ++i) {
-        if (!tree.is_inside(chars1[i])) {
+        if (!tree.contains(chars1[i])) {
             cout << "character " << chars1[i] << " was not found!" << endl;
             return 1;
         }
     }
 
     for (size_t i = 0; i < sizeof(chars2) / sizeof(char); ++i) {
-        if (tree.is_inside(chars2[i])) {
+        if (tree.contains(chars2[i])) {
             cout << "character " << chars2[i] << " was found!" << endl;
             return 1;
         }

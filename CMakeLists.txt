@@ -1,34 +1,15 @@
-# Almost all CMake files should start with this
-# You should always specify a range with the newest
-# and oldest tested versions of CMake. This will ensure
-# you pick up the best policies.
-cmake_minimum_required(VERSION 3.29)
+cmake_minimum_required(VERSION 3.5.0)
+get_filename_component(PROJECT_NAME "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
+project(${PROJECT_NAME} VERSION 0.1.0 LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 20)
 
-# This is your project statement. You should always list languages;
-# Listing the version is nice here since it sets lots of useful variables
-project(
-  AVL_tree
-  VERSION 0.1
-  LANGUAGES CXX)
+if(MSVC)
+    add_compile_options(/W4 /WX)
+else()
+    add_compile_options(-Wall -Wextra -Werror -O0)
+endif()
 
-# If you set any CMAKE_ variables, that can go here.
-# (But usually don't do this, except maybe for C++ standard)
+set(APP_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${APP_ROOT_DIR})
 
-# Find packages go here.
-
-# You should usually split this into folders, but this is a simple example
-
-# This is a "default" library, and will match the *** variable setting.
-# Other common choices are STATIC, SHARED, and MODULE
-# Including header files here helps IDEs but is not required.
-# Output libname matches target name, with the usual extensions on your system
-add_library(AVL_tree AVL_tree.cpp AVL_tree.hpp)
-
-# Link each target with other targets or add options, etc.
-
-# Adding something we can run - Output name matches target name
-add_executable(test test.cpp)
-
-# Make sure you link your targets with this command. It can also link libraries and
-# even flags, so linking a target that does not exist will not give a configure-time error.
-target_link_libraries(test PRIVATE AVL_tree)
+add_executable(${PROJECT_NAME} test.cpp AVL_tree.hpp)

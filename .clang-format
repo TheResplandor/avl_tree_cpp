@@ -1,0 +1,29 @@
+BasedOnStyle: WebKit
+
+BreakConstructorInitializers: AfterColon
+SpaceBeforeCtorInitializerColon: false
+PackConstructorInitializers: Never
+AlwaysBreakTemplateDeclarations: true
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: true
+BreakBeforeAssignmentOperators: false
+IndentWidth: 4
+
+ColumnLimit: 100
+
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex:           '^<.*>'   # System includes
+    Priority:        1
+  - Regex:           '".*"'      # Project includes
+    Priority:        2
+SortIncludes: true
+
+# Breaks each function argument into a new line
+BinPackArguments: false
+
+# Encourages breaking before the first parameter if the line is too long
+PenaltyBreakBeforeFirstCallParameter: 1
+
+AllowShortFunctionsOnASingleLine: None
+

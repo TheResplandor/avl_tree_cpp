@@ -7,6 +7,7 @@ Purpose:    AVL_tree class declaration.
 
 #include <algorithm>
 #include <cmath>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -18,10 +19,9 @@ enum class avl_statuses {
     UNINITIALIZED = -1,
     SUCCESS = 0,
     VALUE_NOT_FOUND,
-    VALUE_EXISTS,
 };
 
-template <typename T>
+template <std::totally_ordered T>
 class AVL_tree {
 public:
     AVL_tree() = default;

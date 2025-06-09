@@ -35,8 +35,8 @@ public:
         auto new_node = std::make_unique<AVL_node>(value);
         AVL_node* parent = nullptr;
 
-        if (this->m_head == nullptr) {
-            this->m_head = std::move(new_node);
+        if (m_head == nullptr) {
+            m_head = std::move(new_node);
             return avl_statuses::SUCCESS;
         }
 
@@ -91,7 +91,7 @@ public:
 
         // Only the tree's root has no parent.
         if (parent == nullptr) {
-            this->m_head = std::move(replacement);
+            m_head = std::move(replacement);
         } else {
             if (to_remove == parent->m_smaller.get()) {
                 parent->m_smaller = std::move(replacement);
@@ -117,10 +117,10 @@ public:
      */
     void print_tree()
     {
-        size_t height = AVL_node::get_height(this->m_head.get());
+        size_t height = AVL_node::get_height(m_head.get());
 
         for (size_t i = 0; i < height; ++i) {
-            this->m_head->print_nth_depth(i, height);
+            m_head->print_nth_depth(i, height);
             std::cout << "\n";
         }
     }
@@ -223,7 +223,7 @@ private:
 
         bool operator<(const AVL_node& other) const
         {
-            return *(this->m_value) < *(other.m_value);
+            return *(m_value) < *(other.m_value);
         }
 
         static size_t get_height(AVL_node const* node)
@@ -256,7 +256,7 @@ private:
                 }
 
                 if (height == 1) {
-                    std::cout << *(this->m_value);
+                    std::cout << *(m_value);
                     return node_statuses::SUCCESS;
                 }
 
@@ -265,17 +265,17 @@ private:
                     std::cout << FILLER_CHAR;
                 }
                 for (size_t i = 0; i < std::pow(2, power) - 1; ++i) {
-                    if (this->m_smaller == nullptr) {
+                    if (m_smaller == nullptr) {
                         std::cout << FILLER_CHAR;
                     } else {
                         std::cout << BRANCH_CHAR;
                     }
                 }
 
-                std::cout << *(this->m_value);
+                std::cout << *(m_value);
 
                 for (size_t i = 0; i < std::pow(2, power) - 1; ++i) {
-                    if (this->m_bigger == nullptr) {
+                    if (m_bigger == nullptr) {
                         std::cout << FILLER_CHAR;
                     } else {
                         std::cout << BRANCH_CHAR;
@@ -285,25 +285,25 @@ private:
                     std::cout << FILLER_CHAR;
                 }
             } else {
-                if (is_empty || (this->m_smaller == nullptr)) {
+                if (is_empty || (m_smaller == nullptr)) {
                     status = this->print_nth_depth(depth - 1, height - 1, true);
                     if (status != node_statuses::SUCCESS) {
                         return status;
                     }
                 } else {
-                    status = this->m_smaller->print_nth_depth(depth - 1, height - 1);
+                    status = m_smaller->print_nth_depth(depth - 1, height - 1);
                     if (status != node_statuses::SUCCESS) {
                         return status;
                     }
                 }
                 std::cout << FILLER_CHAR;
-                if (is_empty || (this->m_bigger == nullptr)) {
+                if (is_empty || (m_bigger == nullptr)) {
                     status = this->print_nth_depth(depth - 1, height - 1, true);
                     if (status != node_statuses::SUCCESS) {
                         return status;
                     }
                 } else {
-                    status = this->m_bigger->print_nth_depth(depth - 1, height - 1);
+                    status = m_bigger->print_nth_depth(depth - 1, height - 1);
                     if (status != node_statuses::SUCCESS) {
                         return status;
                     }

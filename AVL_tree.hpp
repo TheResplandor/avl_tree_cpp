@@ -35,12 +35,12 @@ public:
         auto new_node = std::make_unique<AVL_node>(value);
         AVL_node* parent = nullptr;
 
-        if (nullptr == this->m_head) {
+        if (this->m_head == nullptr) {
             this->m_head = std::move(new_node);
             return avl_statuses::SUCCESS;
         }
 
-        m_head->find_potential_parent(value, parent);
+        parent = m_head->find_potential_parent(value);
 
         if (*(new_node->m_value) <= *(parent->m_value)) {
             parent->m_smaller = std::move(new_node);
@@ -56,18 +56,18 @@ public:
         AVL_node* parent = nullptr;
         std::unique_ptr<AVL_node> replacement = nullptr;
 
-        this->m_head->find(value, to_remove, parent);
-        if (nullptr == to_remove) {
+        to_remove = m_head->find(value, &parent);
+        if (to_remove == nullptr) {
             return avl_statuses::VALUE_NOT_FOUND;
         }
 
         /* to_remove has 2 children - swap its value with its minimal bigger
         child's value and remove the child. */
-        if ((nullptr != to_remove->m_bigger) && (nullptr != to_remove->m_smaller)) {
+        if ((to_remove->m_bigger != nullptr) && (to_remove->m_smaller != nullptr)) {
             AVL_node* parent_of_min = nullptr;
             AVL_node* to_swap = nullptr;
 
-            to_remove->m_bigger->get_parent_of_min(parent_of_min);
+            parent_of_min = to_remove->m_bigger->get_parent_of_min();
             if (parent_of_min == nullptr) {
                 to_swap = to_remove->m_bigger.get();
                 parent_of_min = to_remove;
@@ -87,13 +87,13 @@ public:
 
         // Get to_remove's child if exists, or nullptr if it has no child.
         replacement =
-            std::move(nullptr == to_remove->m_smaller ? to_remove->m_bigger : to_remove->m_smaller);
+            std::move(to_remove->m_smaller == nullptr ? to_remove->m_bigger : to_remove->m_smaller);
 
         // Only the tree's root has no parent.
-        if (nullptr == parent) {
+        if (parent == nullptr) {
             this->m_head = std::move(replacement);
         } else {
-            if (parent->m_smaller.get() == to_remove) {
+            if (to_remove == parent->m_smaller.get()) {
                 parent->m_smaller = std::move(replacement);
             } else {
                 parent->m_bigger = std::move(replacement);
@@ -105,12 +105,7 @@ public:
 
     bool contains(T const& value) const
     {
-        AVL_node* parent;
-        AVL_node* node;
-
-        this->m_head->find(value, node, parent);
-
-        return nullptr != node;
+        return m_head->find(value, nullptr) != nullptr;
     }
 
     /**
@@ -153,10 +148,9 @@ private:
         }
 
         /**
-         * @brief BFS cleanup of the subtree,
+         * @brief safe cleanup of the subtree.
          *
-         * This is to avoid stack overflows caused by unique_ptr's destructor
-         * for long subtrees.
+         * This avoids recursion or dynamic alloactions, while working in O(n).
          */
         ~AVL_node()
         {
@@ -166,14 +160,14 @@ private:
 
         /**
          * @brief Search for a value in the subtree and return its node if
-         * found, and its (potential) parent.
+         * found, and optionaly its (potential) parent.
          *
          * @param[in] value The node value to search for
-         * @param[out] node The node if found, nullptr otherwise.
-         * @param[out] parent Parent of the node or potential parent if not
-         * found.
+         * @param[out] parent Optional parent of the node or potential parent if not found.
+         *
+         * @returns The node if found, nullptr otherwise.
          */
-        void find(T const& value, AVL_node*& node, AVL_node*& parent)
+        AVL_node* find(T const& value, AVL_node** parent)
         {
             AVL_node* curr_node = this;
             AVL_node* curr_parent = nullptr;
@@ -187,24 +181,26 @@ private:
                 }
             }
 
-            node = curr_node;
-            parent = curr_parent;
+            if (parent != nullptr) {
+                *parent = curr_parent;
+            }
+            return curr_node;
         }
 
-        void find_potential_parent(T const& value, AVL_node*& parent)
+        AVL_node* find_potential_parent(T const& value)
         {
             AVL_node* curr_node = nullptr;
             AVL_node* curr_parent = nullptr;
 
             do {
-                find(value, curr_node, curr_parent);
+                curr_node = find(value, &curr_parent);
                 if (curr_node != nullptr) {
                     curr_parent = curr_node;
                     curr_node = curr_node->m_smaller.get();
                 }
             } while (curr_node != nullptr);
 
-            parent = curr_parent;
+            return curr_parent;
         }
 
         /**
@@ -213,16 +209,16 @@ private:
          * @param[out] parent The parent of the node, or nullptr if the
          * minimum is the calling node.
          */
-        void get_parent_of_min(AVL_node*& parent)
+        AVL_node* get_parent_of_min()
         {
             AVL_node* curr_node = this;
             AVL_node* curr_parent = nullptr;
-            while (nullptr != curr_node->m_smaller) {
+            while (curr_node->m_smaller != nullptr) {
                 curr_parent = curr_node;
                 curr_node = curr_node->m_smaller.get();
             }
 
-            parent = curr_parent;
+            return curr_parent;
         }
 
         bool operator<(const AVL_node& other) const
@@ -232,7 +228,7 @@ private:
 
         static size_t get_height(AVL_node const* node)
         {
-            if (nullptr == node) {
+            if (node == nullptr) {
                 return 0;
             }
 
@@ -247,7 +243,7 @@ private:
             node_statuses status = node_statuses::UNINITIALIZED;
             size_t power = 0;
 
-            if (0 == height) {
+            if (height == 0) {
                 return node_statuses::INVALID_HEIGHT;
             }
 
@@ -269,7 +265,7 @@ private:
                     std::cout << FILLER_CHAR;
                 }
                 for (size_t i = 0; i < std::pow(2, power) - 1; ++i) {
-                    if (nullptr == this->m_smaller) {
+                    if (this->m_smaller == nullptr) {
                         std::cout << FILLER_CHAR;
                     } else {
                         std::cout << BRANCH_CHAR;
@@ -279,7 +275,7 @@ private:
                 std::cout << *(this->m_value);
 
                 for (size_t i = 0; i < std::pow(2, power) - 1; ++i) {
-                    if (nullptr == this->m_bigger) {
+                    if (this->m_bigger == nullptr) {
                         std::cout << FILLER_CHAR;
                     } else {
                         std::cout << BRANCH_CHAR;
@@ -289,26 +285,26 @@ private:
                     std::cout << FILLER_CHAR;
                 }
             } else {
-                if (is_empty || nullptr == this->m_smaller) {
+                if (is_empty || (this->m_smaller == nullptr)) {
                     status = this->print_nth_depth(depth - 1, height - 1, true);
-                    if (node_statuses::SUCCESS != status) {
+                    if (status != node_statuses::SUCCESS) {
                         return status;
                     }
                 } else {
                     status = this->m_smaller->print_nth_depth(depth - 1, height - 1);
-                    if (node_statuses::SUCCESS != status) {
+                    if (status != node_statuses::SUCCESS) {
                         return status;
                     }
                 }
                 std::cout << FILLER_CHAR;
-                if (is_empty || nullptr == this->m_bigger) {
+                if (is_empty || (this->m_bigger == nullptr)) {
                     status = this->print_nth_depth(depth - 1, height - 1, true);
-                    if (node_statuses::SUCCESS != status) {
+                    if (status != node_statuses::SUCCESS) {
                         return status;
                     }
                 } else {
                     status = this->m_bigger->print_nth_depth(depth - 1, height - 1);
-                    if (node_statuses::SUCCESS != status) {
+                    if (status != node_statuses::SUCCESS) {
                         return status;
                     }
                 }

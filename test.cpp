@@ -10,22 +10,9 @@ typedef pair<uint16_t, uint16_t> dos;
 
 int main()
 {
-    char chars1[] = { 'k',
-        'd',
-        'r',
-        'd',
-        'e',
-        'f',
-        'z',
-        's',
-        'e',
-        'i',
-        'w',
-        'l',
-        'm',
-        'n',
-        'b',
-        'a' };
+    char chars1[] = {
+        'k', 'd', 'r', 'd', 'e', 'f', 'z', 's', 'e', 'i', 'w', 'l', 'm', 'n', 'b', 'a'
+    };
 
     char chars2[] = { 'A', 'N', '8', 'Y' };
     AVL_tree<char> tree { chars1[0] };

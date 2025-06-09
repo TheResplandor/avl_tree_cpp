@@ -3,11 +3,13 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "cmake build project",
+            "label": "cmake build debug project",
             "command": "C:/Program Files/CMake/bin/cmake.exe",
             "args": [
                 "--build",
-                "."
+                ".",
+                "--config",
+                "Debug"
             ],
             "options": {
                 "cwd": "${fileDirname}/build"

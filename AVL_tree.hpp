@@ -14,9 +14,6 @@ Purpose:    AVL_tree class declaration.
 #include <utility>
 #include <vector>
 
-const char FILLER_CHAR = ' ';
-const char BRANCH_CHAR = '_';
-
 enum class avl_statuses {
     UNINITIALIZED = -1,
     SUCCESS = 0,
@@ -66,8 +63,7 @@ public:
 
         /* to_remove has 2 children - swap its value with its minimal bigger
         child's value and remove the child. */
-        if ((nullptr != to_remove->m_bigger)
-            && (nullptr != to_remove->m_smaller)) {
+        if ((nullptr != to_remove->m_bigger) && (nullptr != to_remove->m_smaller)) {
             AVL_node* parent_of_min = nullptr;
             AVL_node* to_swap = nullptr;
 
@@ -90,9 +86,8 @@ public:
         }
 
         // Get to_remove's child if exists, or nullptr if it has no child.
-        replacement
-            = std::move(nullptr == to_remove->m_smaller ? to_remove->m_bigger
-                                                        : to_remove->m_smaller);
+        replacement =
+            std::move(nullptr == to_remove->m_smaller ? to_remove->m_bigger : to_remove->m_smaller);
 
         // Only the tree's root has no parent.
         if (nullptr == parent) {
@@ -144,8 +139,8 @@ private:
 
     class AVL_node {
     public:
-        AVL_node(T const& value, std::unique_ptr<AVL_node>&& left,
-            std::unique_ptr<AVL_node>&& right):
+        AVL_node(
+            T const& value, std::unique_ptr<AVL_node>&& left, std::unique_ptr<AVL_node>&& right):
             m_smaller(std::move(left)),
             m_bigger(std::move(right)),
             m_value(std::make_unique<T>(value))
@@ -165,31 +160,8 @@ private:
          */
         ~AVL_node()
         {
-            std::vector<std::unique_ptr<AVL_node>> nodes {};
-            std::unique_ptr<AVL_node> current = nullptr;
-
-            // Reserve some initial space to avoid re-allocations at first.
-            nodes.reserve(100);
-
-            if (m_smaller != nullptr) {
-                nodes.push_back(std::move(m_smaller));
-            }
-            if (m_bigger != nullptr) {
-                nodes.push_back(std::move(m_bigger));
-            }
-
-            while (nodes.size() != 0) {
-                auto final_node_it = std::prev(nodes.end());
-                current = std::move(*final_node_it);
-                nodes.erase(final_node_it);
-
-                if (current->m_smaller != nullptr) {
-                    nodes.push_back(std::move(current->m_smaller));
-                }
-                if (current->m_bigger != nullptr) {
-                    nodes.push_back(std::move(current->m_bigger));
-                }
-            }
+            destroy_tree(std::move(m_smaller));
+            destroy_tree(std::move(m_bigger));
         }
 
         /**
@@ -264,14 +236,14 @@ private:
                 return 0;
             }
 
-            return 1
-                + std::max(get_height(node->m_smaller.get()),
-                    get_height(node->m_bigger.get()));
+            return 1 +
+                std::max(get_height(node->m_smaller.get()), get_height(node->m_bigger.get()));
         }
 
-        node_statuses print_nth_depth(
-            size_t depth, size_t height, bool is_empty = false)
+        node_statuses print_nth_depth(size_t depth, size_t height, bool is_empty = false)
         {
+            const char FILLER_CHAR = ' ';
+            const char BRANCH_CHAR = '_';
             node_statuses status = node_statuses::UNINITIALIZED;
             size_t power = 0;
 
@@ -323,8 +295,7 @@ private:
                         return status;
                     }
                 } else {
-                    status = this->m_smaller->print_nth_depth(
-                        depth - 1, height - 1);
+                    status = this->m_smaller->print_nth_depth(depth - 1, height - 1);
                     if (node_statuses::SUCCESS != status) {
                         return status;
                     }
@@ -336,8 +307,7 @@ private:
                         return status;
                     }
                 } else {
-                    status = this->m_bigger->print_nth_depth(
-                        depth - 1, height - 1);
+                    status = this->m_bigger->print_nth_depth(depth - 1, height - 1);
                     if (node_statuses::SUCCESS != status) {
                         return status;
                     }
@@ -350,6 +320,48 @@ private:
         std::unique_ptr<AVL_node> m_smaller = nullptr;
         std::unique_ptr<AVL_node> m_bigger = nullptr;
         std::unique_ptr<T> m_value;
+
+    private:
+        /**
+         * @brief Destroy the subtree starting at head.
+         *
+         * Does so without hidden recursion or dynamic allocations by reversing the direction of the
+         * tree and only starts destroying nodes from the ends of the tree when they have no more
+         * child nodes.
+         *
+         * @param head The head of the nodes tree to be destroyed.
+         */
+        void destroy_tree(std::unique_ptr<AVL_node> head)
+        {
+            std::unique_ptr<AVL_node> prev = nullptr;
+            std::unique_ptr<AVL_node> next = nullptr;
+            std::unique_ptr<AVL_node> curr = std::move(head);
+
+            while (curr != nullptr) {
+                if (curr->m_smaller != nullptr) {
+                    // proceed to the smaller child node.
+                    next = std::move(curr->m_smaller);
+                    // make m_smaller point to the parent node.
+                    curr->m_smaller = std::move(prev);
+                    prev = std::move(curr);
+                    curr = std::move(next);
+                } else if (curr->m_bigger != nullptr) {
+                    // proceed to the bigger child node.
+                    next = std::move(curr->m_bigger);
+                    // make m_smaller point to the parent node.
+                    curr->m_smaller = std::move(prev);
+                    prev = std::move(curr);
+                    curr = std::move(next);
+                } else {
+                    // No child nodes so move "up" and current node is destroyed.
+                    curr = std::move(prev);
+                    if (curr != nullptr) {
+                        // We are going up so m_smaller already points to the parent node.
+                        prev = std::move(curr->m_smaller);
+                    }
+                }
+            }
+        }
     };
 
     std::unique_ptr<AVL_node> m_head = nullptr;

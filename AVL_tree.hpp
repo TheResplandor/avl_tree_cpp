@@ -30,24 +30,28 @@ public:
     {
     }
 
-    avl_statuses add(T const& value)
+    void add(T const& value)
     {
-        auto new_node = std::make_unique<AVL_node>(value);
-        AVL_node* parent = nullptr;
-
         if (m_head == nullptr) {
-            m_head = std::move(new_node);
-            return avl_statuses::SUCCESS;
+            m_head = std::make_unique<AVL_node>(value);
+            return;
         }
 
-        parent = m_head->find_potential_parent(value);
+        AVL_node* parent = nullptr;
+        auto searched_node = m_head->find(value, &parent);
+        // value already exists.
+        if (searched_node != nullptr) {
+            searched_node->m_count += 1;
+            return;
+        }
 
-        if (*(new_node->m_value) <= *(parent->m_value)) {
+        auto new_node = std::make_unique<AVL_node>(value);
+        if (value < *(parent->m_value)) {
             parent->m_smaller = std::move(new_node);
         } else {
             parent->m_bigger = std::move(new_node);
         }
-        return avl_statuses::SUCCESS;
+        return;
     }
 
     avl_statuses remove(T const& value)
@@ -59,6 +63,11 @@ public:
         to_remove = m_head->find(value, &parent);
         if (to_remove == nullptr) {
             return avl_statuses::VALUE_NOT_FOUND;
+        }
+
+        if (to_remove->m_count > 1) {
+            to_remove->m_count -= 1;
+            return avl_statuses::SUCCESS;
         }
 
         /* to_remove has 2 children - swap its value with its minimal bigger
@@ -76,6 +85,8 @@ public:
             }
 
             to_remove->m_value = std::move(to_swap->m_value);
+            to_remove->m_count = to_swap->m_count;
+            // no need to re-assign to_swap's values since we are about to remove it.
 
             /* to_swap, being the minimum of its tree, has no left child,
             so just remove it with a case of 1 or 0 children. */
@@ -138,7 +149,8 @@ private:
             T const& value, std::unique_ptr<AVL_node>&& left, std::unique_ptr<AVL_node>&& right):
             m_smaller(std::move(left)),
             m_bigger(std::move(right)),
-            m_value(std::make_unique<T>(value))
+            m_value(std::make_unique<T>(value)),
+            m_count(1)
         {
         }
 
@@ -185,22 +197,6 @@ private:
                 *parent = curr_parent;
             }
             return curr_node;
-        }
-
-        AVL_node* find_potential_parent(T const& value)
-        {
-            AVL_node* curr_node = nullptr;
-            AVL_node* curr_parent = nullptr;
-
-            do {
-                curr_node = find(value, &curr_parent);
-                if (curr_node != nullptr) {
-                    curr_parent = curr_node;
-                    curr_node = curr_node->m_smaller.get();
-                }
-            } while (curr_node != nullptr);
-
-            return curr_parent;
         }
 
         /**
@@ -316,6 +312,7 @@ private:
         std::unique_ptr<AVL_node> m_smaller = nullptr;
         std::unique_ptr<AVL_node> m_bigger = nullptr;
         std::unique_ptr<T> m_value;
+        uint32_t m_count;
 
     private:
         /**

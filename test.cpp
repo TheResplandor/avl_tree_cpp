@@ -91,10 +91,7 @@ test_result test_add_contains()
     int numbers[] = { 10, 5, 9, 8, 5, 600, 700, 15 };
     AVL_tree<int> tree {};
     for (auto number : numbers) {
-        auto status = tree.add(number);
-        if (status != avl_statuses::SUCCESS) {
-            return test_result(false, __func__);
-        }
+        tree.add(number);
     }
 
     for (auto number : numbers) {

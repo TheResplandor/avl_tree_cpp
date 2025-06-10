@@ -31,7 +31,7 @@ test_result test_compiles_with_custom_type()
         int val;
         auto operator<=>(const comparable&) const = default;
     };
-    AVL_tree<comparable> tree {};
+    AVL_tree<comparable> tree { comparable { .val = 6 } };
     tree.add(comparable { .val = 5 });
     tree.add(comparable { .val = 50 });
 

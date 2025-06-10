@@ -25,12 +25,18 @@ template <std::totally_ordered T>
 class AVL_tree {
 public:
     AVL_tree() = default;
-    explicit AVL_tree(T const& head_value):
+    explicit AVL_tree(
+        T head_value): // TODO is this best to get the value as && and force the
+                       // user to use std::move?
+                       // on the one hand it makes it clear that "you lose whatever value is
+                       // stored in that variable". on the other hand, it might prevent
+                       // optimizations like RVO. plus, does it make usage less comfortable?
+                       // It doesnt compile with primitive values and && so idk what to do.
         m_head(std::make_unique<AVL_node>(head_value, nullptr, nullptr))
     {
     }
 
-    void add(T const& value)
+    void add(T value)
     {
         if (m_head == nullptr) {
             m_head = std::make_unique<AVL_node>(value);
@@ -46,7 +52,7 @@ public:
         }
 
         auto new_node = std::make_unique<AVL_node>(value);
-        if (value < *(parent->m_value)) {
+        if (value < parent->m_value) {
             parent->m_smaller = std::move(new_node);
         } else {
             parent->m_bigger = std::move(new_node);
@@ -54,7 +60,7 @@ public:
         return;
     }
 
-    avl_statuses remove(T const& value)
+    avl_statuses remove(T const value)
     {
         AVL_node* to_remove = nullptr;
         AVL_node* parent = nullptr;
@@ -114,7 +120,7 @@ public:
         return avl_statuses::SUCCESS;
     }
 
-    bool contains(T const& value) const
+    bool contains(T const value) const
     {
         return m_head->find(value, nullptr) != nullptr;
     }
@@ -145,16 +151,15 @@ private:
 
     class AVL_node {
     public:
-        AVL_node(
-            T const& value, std::unique_ptr<AVL_node>&& left, std::unique_ptr<AVL_node>&& right):
+        AVL_node(T& value, std::unique_ptr<AVL_node>&& left, std::unique_ptr<AVL_node>&& right):
             m_smaller(std::move(left)),
             m_bigger(std::move(right)),
-            m_value(std::make_unique<T>(value)),
+            m_value(std::move(value)),
             m_count(1)
         {
         }
 
-        AVL_node(T const& value):
+        AVL_node(T& value):
             AVL_node(value, nullptr, nullptr)
         {
         }
@@ -184,9 +189,9 @@ private:
             AVL_node* curr_node = this;
             AVL_node* curr_parent = nullptr;
 
-            while ((curr_node != nullptr) && (value != *(curr_node->m_value))) {
+            while ((curr_node != nullptr) && (value != curr_node->m_value)) {
                 curr_parent = curr_node;
-                if (value < *(curr_node->m_value)) {
+                if (value < curr_node->m_value) {
                     curr_node = curr_node->m_smaller.get();
                 } else {
                     curr_node = curr_node->m_bigger.get();
@@ -219,7 +224,7 @@ private:
 
         bool operator<(const AVL_node& other) const
         {
-            return *(m_value) < *(other.m_value);
+            return m_value < other.m_value;
         }
 
         static size_t get_height(AVL_node const* node)
@@ -252,7 +257,7 @@ private:
                 }
 
                 if (height == 1) {
-                    std::cout << *(m_value);
+                    std::cout << m_value;
                     return node_statuses::SUCCESS;
                 }
 
@@ -268,7 +273,7 @@ private:
                     }
                 }
 
-                std::cout << *(m_value);
+                std::cout << m_value;
 
                 for (size_t i = 0; i < std::pow(2, power) - 1; ++i) {
                     if (m_bigger == nullptr) {
@@ -311,7 +316,7 @@ private:
 
         std::unique_ptr<AVL_node> m_smaller = nullptr;
         std::unique_ptr<AVL_node> m_bigger = nullptr;
-        std::unique_ptr<T> m_value;
+        T m_value;
         uint32_t m_count;
 
     private:

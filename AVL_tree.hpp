@@ -21,13 +21,13 @@ enum class avl_statuses {
     VALUE_NOT_FOUND,
 };
 
-enum class balance_state : int8_t {
-    SMALLER_UB = -2,
-    SMALLER_HEAVY = -1,
-    BALANCED = 0,
-    BIGGER_HEAVY = 1,
-    BIGGER_UB = 2,
-};
+static int8_t const SMALLER_UB = -2;
+static int8_t const SMALLER_HEAVY = -1;
+static int8_t const SMALLER_SIGN = -1;
+static int8_t const BALANCED = 0;
+static int8_t const BIGGER_SIGN = 1;
+static int8_t const BIGGER_HEAVY = 1;
+static int8_t const BIGGER_UB = 2;
 
 template <std::totally_ordered T>
 class AVL_tree {
@@ -60,11 +60,13 @@ public:
         }
 
         auto new_node = std::make_unique<AVL_node>(value, parent);
+        auto new_node_ptr = new_node.get();
         if (value < parent->m_value) {
             parent->m_smaller = std::move(new_node);
         } else {
             parent->m_bigger = std::move(new_node);
         }
+        parent->rebalance_uptree(new_node_ptr, 1);
         return;
     }
 
@@ -159,7 +161,7 @@ private:
             m_parent(parent),
             m_value(std::move(value)),
             m_count(1),
-            m_balance(balance_state::BALANCED)
+            m_balance(BALANCED)
         {
         }
 
@@ -169,9 +171,9 @@ private:
         }
 
         /**
-         * @brief safe cleanup of the subtree.
+         * @brief simple cleanup which relies on unique_ptr's recursive release properties.
          *
-         * This avoids recursion or dynamic alloactions, while working in O(n).
+         * @note With 10^15 nodes, the worst AVL tree height is 72, so recursion is safe.
          */
         ~AVL_node()
         {
@@ -256,6 +258,9 @@ private:
                 }
 
                 if (height == 1) {
+                    // std::print(
+                    //     "{}{}{}", m_value, (m_balance >= 0) ? "+" : "", int(m_balance)); //
+                    //     TODOguy
                     std::cout << m_value;
                     return node_statuses::SUCCESS;
                 }
@@ -272,6 +277,8 @@ private:
                     }
                 }
 
+                // std::print(
+                //     "{}{}{}", m_value, (m_balance >= 0) ? "+" : "", int(m_balance)); // TODOguy
                 std::cout << m_value;
 
                 for (size_t i = 0; i < std::pow(2, power) - 1; ++i) {
@@ -313,12 +320,116 @@ private:
             return node_statuses::SUCCESS;
         }
 
+        void rebalance_uptree(AVL_node* caller, int8_t balance_change)
+        {
+            bool keep_rebalancing = m_balance == BALANCED;
+            if (m_bigger.get() == caller) {
+                m_balance += BIGGER_SIGN * balance_change;
+            } else if (m_smaller.get() == caller) {
+                m_balance += SMALLER_SIGN * balance_change;
+            } else {
+                int* p = (int*)0x1234;
+                *p = 999;
+            }
+            auto parent = m_parent;
+
+            if (m_balance == SMALLER_UB) {
+                // if ((m_smaller != nullptr) && (m_smaller->m_balance == BIGGER_HEAVY)) {
+                //     m_smaller->rotate_to_bigger();
+                // }
+                this->rotate_to_smaller();
+            } else if (m_balance == BIGGER_UB) {
+                // if ((m_bigger != nullptr) && (m_bigger->m_balance == SMALLER_HEAVY)) {
+                //     m_bigger->rotate_to_bigger();
+                // }
+                this->rotate_to_bigger();
+            }
+
+            if ((parent != nullptr) && keep_rebalancing) {
+                parent->rebalance_uptree(this, balance_change);
+            }
+        }
+
         std::unique_ptr<AVL_node> m_smaller = nullptr;
         std::unique_ptr<AVL_node> m_bigger = nullptr;
         AVL_node* m_parent = nullptr;
         T m_value;
         uint32_t m_count;
-        balance_state m_balance;
+        int8_t m_balance;
+
+    private:
+        void rotate_to_smaller()
+        {
+            if (m_smaller->m_balance == BIGGER_HEAVY) {
+                m_smaller->rotate_to_bigger();
+            }
+            // Swap contents of this and m_bigger.
+            // The ownership of the head node is inaccessible so changing location is the only
+            // solution.
+            swap_contents(this, m_smaller.get());
+
+            // Move subtrees to achieve BST property again.
+            std::swap(m_bigger, m_smaller);
+            std::swap(m_bigger->m_smaller, m_bigger->m_bigger);
+            std::swap(m_bigger->m_bigger, m_smaller);
+            if (m_smaller != nullptr) {
+                m_smaller->m_parent = this;
+            }
+            if (m_bigger->m_smaller != nullptr) {
+                m_bigger->m_smaller->m_parent = m_bigger.get();
+            }
+            if (m_bigger->m_bigger != nullptr) {
+                m_bigger->m_bigger->m_parent = m_bigger.get();
+            }
+
+            auto tmp = m_balance;
+            if ((m_balance == SMALLER_HEAVY) && (m_bigger->m_balance == SMALLER_HEAVY)) {
+                m_balance = BIGGER_HEAVY;
+            } else {
+                m_balance = m_bigger->m_balance + BIGGER_HEAVY;
+            }
+
+            m_bigger->m_balance = tmp + BIGGER_HEAVY - m_bigger->m_balance;
+        }
+
+        void rotate_to_bigger()
+        {
+            if (m_bigger->m_balance == SMALLER_HEAVY) {
+                m_bigger->rotate_to_smaller();
+            }
+            // Swap contents of this and m_bigger.
+            // The ownership of the head node is inaccessible so changing location is the only
+            // solution.
+            swap_contents(this, m_bigger.get());
+
+            // Move the subtrees to achieve BST property again.
+            std::swap(m_smaller, m_bigger);
+            std::swap(m_smaller->m_smaller, m_smaller->m_bigger);
+            std::swap(m_smaller->m_smaller, m_bigger);
+            if (m_bigger != nullptr) {
+                m_bigger->m_parent = this;
+            }
+            if (m_smaller->m_smaller != nullptr) {
+                m_smaller->m_smaller->m_parent = m_smaller.get();
+            }
+            if (m_smaller->m_bigger != nullptr) {
+                m_smaller->m_bigger->m_parent = m_smaller.get();
+            }
+
+            auto tmp = m_balance;
+            if ((m_balance == BIGGER_HEAVY) && (m_smaller->m_balance == BIGGER_HEAVY)) {
+                m_balance = SMALLER_HEAVY;
+            } else {
+                m_balance = m_smaller->m_balance + SMALLER_HEAVY;
+            }
+            m_smaller->m_balance = tmp + SMALLER_HEAVY - m_smaller->m_balance;
+        }
+
+        static void swap_contents(AVL_node* first, AVL_node* second)
+        {
+            std::swap(first->m_value, second->m_value);
+            std::swap(first->m_count, second->m_count);
+        }
     };
 
     std::unique_ptr<AVL_node> m_head = nullptr;

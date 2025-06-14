@@ -48,6 +48,7 @@ test_result test_visual_outcome()
     AVL_tree<char> tree { chars1[0] };
 
     for (size_t i = 1; i < sizeof(chars1) / sizeof(char); ++i) {
+        std::println("adding {}", chars1[i]);
         tree.add(chars1[i]);
         tree.print_tree();
         cout << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -76,12 +77,42 @@ test_result test_visual_outcome()
     }
 
     for (size_t i = 0; i < sizeof(chars1) / sizeof(char); ++i) {
+        std::println("removing {}", chars1[i]);
         tree.remove(chars1[i]);
         tree.print_tree();
         cout << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
                 "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
              << endl;
     }
+
+    return test_result(true, __func__);
+}
+
+test_result test_big_tree_visual()
+{
+    AVL_tree<char> tree { '+' };
+    auto addition = [&tree](char first, char last) {
+        for (char i = first; i <= last; ++i) {
+            std::println("adding {}", i);
+            tree.add(i);
+            tree.print_tree();
+            std::println("\n{0}{0}{0}{0}{0}{0}{0}{0}", "~~~~~~~~~~~~~~~~~");
+        }
+    };
+    auto removal = [&tree](char first, char last) {
+        for (char i = first; i <= last; ++i) {
+            std::println("removing {}", i);
+            tree.remove(i);
+            tree.print_tree();
+            std::println("\n{0}{0}{0}{0}{0}{0}{0}{0}", "~~~~~~~~~~~~~~~~~");
+        }
+    };
+    // addition('a', 'z');
+    // addition('A', 'Z');
+    addition('0', '9');
+    // removal('a', 'z');
+    // removal('A', 'Z');
+    removal('0', '9');
 
     return test_result(true, __func__);
 }
@@ -104,7 +135,8 @@ test_result test_add_contains()
 }
 
 static const auto tests = {
-    test_visual_outcome,
+    // test_visual_outcome,
+    test_big_tree_visual,
     // test_no_comparison_class,
     test_compiles_with_custom_type,
     test_add_contains,

@@ -107,11 +107,11 @@ test_result test_big_tree_visual()
             std::println("\n{0}{0}{0}{0}{0}{0}{0}{0}", "~~~~~~~~~~~~~~~~~");
         }
     };
-    // addition('a', 'z');
-    // addition('A', 'Z');
+    addition('a', 'z');
+    addition('A', 'Z');
     addition('0', '9');
-    // removal('a', 'z');
-    // removal('A', 'Z');
+    removal('a', 'z');
+    removal('A', 'Z');
     removal('0', '9');
 
     return test_result(true, __func__);
@@ -135,7 +135,7 @@ test_result test_add_contains()
 }
 
 static const auto tests = {
-    // test_visual_outcome,
+    test_visual_outcome,
     test_big_tree_visual,
     // test_no_comparison_class,
     test_compiles_with_custom_type,

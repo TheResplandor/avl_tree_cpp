@@ -60,13 +60,15 @@ public:
         }
 
         auto new_node = std::make_unique<AVL_node>(value, parent);
-        auto new_node_ptr = new_node.get();
+        bool is_smaller_child = false;
         if (value < parent->m_value) {
             parent->m_smaller = std::move(new_node);
+            is_smaller_child = true;
         } else {
             parent->m_bigger = std::move(new_node);
+            is_smaller_child = false;
         }
-        parent->rebalance_uptree(new_node_ptr, 1);
+        parent->rebalance_uptree(is_smaller_child, 1);
         return;
     }
 
@@ -102,24 +104,31 @@ public:
         }
 
         // Get to_remove's child if exists, or nullptr if it has no child.
+        auto parent = to_remove->m_parent;
         if (to_remove->m_smaller != nullptr) {
             replacement = std::move(to_remove->m_smaller);
-            replacement->m_parent = to_remove->m_parent;
+            replacement->m_parent = parent;
         } else if (to_remove->m_bigger != nullptr) {
             replacement = std::move(to_remove->m_bigger);
-            replacement->m_parent = to_remove->m_parent;
+            replacement->m_parent = parent;
         }
 
+        bool is_removing_smaller = false;
+
         // Only the tree's root has no parent.
-        if (to_remove->m_parent == nullptr) {
+        if (parent == nullptr) {
             m_head = std::move(replacement);
-        } else {
-            if (to_remove == to_remove->m_parent->m_smaller.get()) {
-                to_remove->m_parent->m_smaller = std::move(replacement);
-            } else {
-                to_remove->m_parent->m_bigger = std::move(replacement);
-            }
+            return avl_statuses::SUCCESS;
         }
+        if (to_remove == parent->m_smaller.get()) {
+            parent->m_smaller = std::move(replacement);
+            is_removing_smaller = true;
+        } else {
+            parent->m_bigger = std::move(replacement);
+            is_removing_smaller = false;
+        }
+
+        parent->rebalance_uptree(is_removing_smaller, -1);
 
         return avl_statuses::SUCCESS;
     }
@@ -258,9 +267,7 @@ private:
                 }
 
                 if (height == 1) {
-                    // std::print(
-                    //     "{}{}{}", m_value, (m_balance >= 0) ? "+" : "", int(m_balance)); //
-                    //     TODOguy
+                    // std::cout << int(m_balance) + 1;
                     std::cout << m_value;
                     return node_statuses::SUCCESS;
                 }
@@ -277,8 +284,7 @@ private:
                     }
                 }
 
-                // std::print(
-                //     "{}{}{}", m_value, (m_balance >= 0) ? "+" : "", int(m_balance)); // TODOguy
+                // std::cout << int(m_balance) + 1;
                 std::cout << m_value;
 
                 for (size_t i = 0; i < std::pow(2, power) - 1; ++i) {
@@ -320,33 +326,30 @@ private:
             return node_statuses::SUCCESS;
         }
 
-        void rebalance_uptree(AVL_node* caller, int8_t balance_change)
+        void rebalance_uptree(bool smaller_called, int8_t balance_change)
         {
-            bool keep_rebalancing = m_balance == BALANCED;
-            if (m_bigger.get() == caller) {
-                m_balance += BIGGER_SIGN * balance_change;
-            } else if (m_smaller.get() == caller) {
+            bool keep_rebalancing = ((m_balance == BALANCED) == (balance_change == 1));
+
+            if (smaller_called) {
                 m_balance += SMALLER_SIGN * balance_change;
             } else {
-                int* p = (int*)0x1234;
-                *p = 999;
+                // bigger child called.
+                m_balance += BIGGER_SIGN * balance_change;
             }
             auto parent = m_parent;
 
             if (m_balance == SMALLER_UB) {
-                // if ((m_smaller != nullptr) && (m_smaller->m_balance == BIGGER_HEAVY)) {
-                //     m_smaller->rotate_to_bigger();
-                // }
                 this->rotate_to_smaller();
             } else if (m_balance == BIGGER_UB) {
-                // if ((m_bigger != nullptr) && (m_bigger->m_balance == SMALLER_HEAVY)) {
-                //     m_bigger->rotate_to_bigger();
-                // }
                 this->rotate_to_bigger();
             }
 
+            if (balance_change == -1) {
+                keep_rebalancing = keep_rebalancing && (m_balance == BALANCED);
+            }
+
             if ((parent != nullptr) && keep_rebalancing) {
-                parent->rebalance_uptree(this, balance_change);
+                parent->rebalance_uptree(this == parent->m_smaller.get(), balance_change);
             }
         }
 

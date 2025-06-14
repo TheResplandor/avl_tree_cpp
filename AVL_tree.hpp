@@ -21,6 +21,14 @@ enum class avl_statuses {
     VALUE_NOT_FOUND,
 };
 
+static int8_t const SMALLER_UB = -2;
+static int8_t const SMALLER_HEAVY = -1;
+static int8_t const SMALLER_SIGN = -1;
+static int8_t const BALANCED = 0;
+static int8_t const BIGGER_SIGN = 1;
+static int8_t const BIGGER_HEAVY = 1;
+static int8_t const BIGGER_UB = 2;
+
 template <std::totally_ordered T>
 class AVL_tree {
 public:
@@ -32,7 +40,7 @@ public:
                        // stored in that variable". on the other hand, it might prevent
                        // optimizations like RVO. plus, does it make usage less comfortable?
                        // It doesnt compile with primitive values and && so idk what to do.
-        m_head(std::make_unique<AVL_node>(head_value, nullptr, nullptr))
+        m_head(std::make_unique<AVL_node>(head_value))
     {
     }
 
@@ -51,22 +59,25 @@ public:
             return;
         }
 
-        auto new_node = std::make_unique<AVL_node>(value);
+        auto new_node = std::make_unique<AVL_node>(value, parent);
+        bool is_smaller_child = false;
         if (value < parent->m_value) {
             parent->m_smaller = std::move(new_node);
+            is_smaller_child = true;
         } else {
             parent->m_bigger = std::move(new_node);
+            is_smaller_child = false;
         }
+        parent->rebalance_uptree(is_smaller_child, 1);
         return;
     }
 
     avl_statuses remove(T const value)
     {
         AVL_node* to_remove = nullptr;
-        AVL_node* parent = nullptr;
         std::unique_ptr<AVL_node> replacement = nullptr;
 
-        to_remove = m_head->find(value, &parent);
+        to_remove = m_head->find(value, nullptr);
         if (to_remove == nullptr) {
             return avl_statuses::VALUE_NOT_FOUND;
         }
@@ -79,17 +90,9 @@ public:
         /* to_remove has 2 children - swap its value with its minimal bigger
         child's value and remove the child. */
         if ((to_remove->m_bigger != nullptr) && (to_remove->m_smaller != nullptr)) {
-            AVL_node* parent_of_min = nullptr;
             AVL_node* to_swap = nullptr;
 
-            parent_of_min = to_remove->m_bigger->get_parent_of_min();
-            if (parent_of_min == nullptr) {
-                to_swap = to_remove->m_bigger.get();
-                parent_of_min = to_remove;
-            } else {
-                to_swap = parent_of_min->m_smaller.get();
-            }
-
+            to_swap = to_remove->m_bigger->get_min();
             to_remove->m_value = std::move(to_swap->m_value);
             to_remove->m_count = to_swap->m_count;
             // no need to re-assign to_swap's values since we are about to remove it.
@@ -97,25 +100,35 @@ public:
             /* to_swap, being the minimum of its tree, has no left child,
             so just remove it with a case of 1 or 0 children. */
             to_remove = to_swap;
-            parent = parent_of_min;
             to_swap = nullptr;
-            parent_of_min = nullptr;
         }
 
         // Get to_remove's child if exists, or nullptr if it has no child.
-        replacement =
-            std::move(to_remove->m_smaller == nullptr ? to_remove->m_bigger : to_remove->m_smaller);
+        auto parent = to_remove->m_parent;
+        if (to_remove->m_smaller != nullptr) {
+            replacement = std::move(to_remove->m_smaller);
+            replacement->m_parent = parent;
+        } else if (to_remove->m_bigger != nullptr) {
+            replacement = std::move(to_remove->m_bigger);
+            replacement->m_parent = parent;
+        }
+
+        bool is_removing_smaller = false;
 
         // Only the tree's root has no parent.
         if (parent == nullptr) {
             m_head = std::move(replacement);
-        } else {
-            if (to_remove == parent->m_smaller.get()) {
-                parent->m_smaller = std::move(replacement);
-            } else {
-                parent->m_bigger = std::move(replacement);
-            }
+            return avl_statuses::SUCCESS;
         }
+        if (to_remove == parent->m_smaller.get()) {
+            parent->m_smaller = std::move(replacement);
+            is_removing_smaller = true;
+        } else {
+            parent->m_bigger = std::move(replacement);
+            is_removing_smaller = false;
+        }
+
+        parent->rebalance_uptree(is_removing_smaller, -1);
 
         return avl_statuses::SUCCESS;
     }
@@ -151,28 +164,30 @@ private:
 
     class AVL_node {
     public:
-        AVL_node(T& value, std::unique_ptr<AVL_node>&& left, std::unique_ptr<AVL_node>&& right):
-            m_smaller(std::move(left)),
-            m_bigger(std::move(right)),
+        AVL_node(T& value, AVL_node* parent):
+            m_smaller(nullptr),
+            m_bigger(nullptr),
+            m_parent(parent),
             m_value(std::move(value)),
-            m_count(1)
+            m_count(1),
+            m_balance(BALANCED)
         {
         }
 
         AVL_node(T& value):
-            AVL_node(value, nullptr, nullptr)
+            AVL_node(value, nullptr)
         {
         }
 
         /**
-         * @brief safe cleanup of the subtree.
+         * @brief simple cleanup which relies on unique_ptr's recursive release properties.
          *
-         * This avoids recursion or dynamic alloactions, while working in O(n).
+         * @note With 10^15 nodes, the worst AVL tree height is 72, so recursion is safe.
          */
         ~AVL_node()
         {
-            destroy_tree(std::move(m_smaller));
-            destroy_tree(std::move(m_bigger));
+            m_smaller.reset();
+            m_bigger.reset();
         }
 
         /**
@@ -205,21 +220,16 @@ private:
         }
 
         /**
-         * @brief Get the parent of the minimum node in the subtree.
-         *
-         * @param[out] parent The parent of the node, or nullptr if the
-         * minimum is the calling node.
+         * @brief Get the minimal node in the subtree.
          */
-        AVL_node* get_parent_of_min()
+        AVL_node* get_min()
         {
             AVL_node* curr_node = this;
-            AVL_node* curr_parent = nullptr;
             while (curr_node->m_smaller != nullptr) {
-                curr_parent = curr_node;
                 curr_node = curr_node->m_smaller.get();
             }
 
-            return curr_parent;
+            return curr_node;
         }
 
         bool operator<(const AVL_node& other) const
@@ -257,6 +267,7 @@ private:
                 }
 
                 if (height == 1) {
+                    // std::cout << int(m_balance) + 1;
                     std::cout << m_value;
                     return node_statuses::SUCCESS;
                 }
@@ -273,6 +284,7 @@ private:
                     }
                 }
 
+                // std::cout << int(m_balance) + 1;
                 std::cout << m_value;
 
                 for (size_t i = 0; i < std::pow(2, power) - 1; ++i) {
@@ -314,51 +326,112 @@ private:
             return node_statuses::SUCCESS;
         }
 
+        void rebalance_uptree(bool smaller_called, int8_t balance_change)
+        {
+            bool keep_rebalancing = ((m_balance == BALANCED) == (balance_change == 1));
+
+            if (smaller_called) {
+                m_balance += SMALLER_SIGN * balance_change;
+            } else {
+                // bigger child called.
+                m_balance += BIGGER_SIGN * balance_change;
+            }
+            auto parent = m_parent;
+
+            if (m_balance == SMALLER_UB) {
+                this->rotate_to_smaller();
+            } else if (m_balance == BIGGER_UB) {
+                this->rotate_to_bigger();
+            }
+
+            if (balance_change == -1) {
+                keep_rebalancing = keep_rebalancing && (m_balance == BALANCED);
+            }
+
+            if ((parent != nullptr) && keep_rebalancing) {
+                parent->rebalance_uptree(this == parent->m_smaller.get(), balance_change);
+            }
+        }
+
         std::unique_ptr<AVL_node> m_smaller = nullptr;
         std::unique_ptr<AVL_node> m_bigger = nullptr;
+        AVL_node* m_parent = nullptr;
         T m_value;
         uint32_t m_count;
+        int8_t m_balance;
 
     private:
-        /**
-         * @brief Destroy the subtree starting at head.
-         *
-         * Does so without hidden recursion or dynamic allocations by reversing the direction of the
-         * tree and only starts destroying nodes from the ends of the tree when they have no more
-         * child nodes.
-         *
-         * @param head The head of the nodes tree to be destroyed.
-         */
-        void destroy_tree(std::unique_ptr<AVL_node> head)
+        void rotate_to_smaller()
         {
-            std::unique_ptr<AVL_node> prev = nullptr;
-            std::unique_ptr<AVL_node> next = nullptr;
-            std::unique_ptr<AVL_node> curr = std::move(head);
-
-            while (curr != nullptr) {
-                if (curr->m_smaller != nullptr) {
-                    // proceed to the smaller child node.
-                    next = std::move(curr->m_smaller);
-                    // make m_smaller point to the parent node.
-                    curr->m_smaller = std::move(prev);
-                    prev = std::move(curr);
-                    curr = std::move(next);
-                } else if (curr->m_bigger != nullptr) {
-                    // proceed to the bigger child node.
-                    next = std::move(curr->m_bigger);
-                    // make m_smaller point to the parent node.
-                    curr->m_smaller = std::move(prev);
-                    prev = std::move(curr);
-                    curr = std::move(next);
-                } else {
-                    // No child nodes so move "up" and current node is destroyed.
-                    curr = std::move(prev);
-                    if (curr != nullptr) {
-                        // We are going up so m_smaller already points to the parent node.
-                        prev = std::move(curr->m_smaller);
-                    }
-                }
+            if (m_smaller->m_balance == BIGGER_HEAVY) {
+                m_smaller->rotate_to_bigger();
             }
+            // Swap contents of this and m_bigger.
+            // The ownership of the head node is inaccessible so changing location is the only
+            // solution.
+            swap_contents(this, m_smaller.get());
+
+            // Move subtrees to achieve BST property again.
+            std::swap(m_bigger, m_smaller);
+            std::swap(m_bigger->m_smaller, m_bigger->m_bigger);
+            std::swap(m_bigger->m_bigger, m_smaller);
+            if (m_smaller != nullptr) {
+                m_smaller->m_parent = this;
+            }
+            if (m_bigger->m_smaller != nullptr) {
+                m_bigger->m_smaller->m_parent = m_bigger.get();
+            }
+            if (m_bigger->m_bigger != nullptr) {
+                m_bigger->m_bigger->m_parent = m_bigger.get();
+            }
+
+            auto tmp = m_balance;
+            if ((m_balance == SMALLER_HEAVY) && (m_bigger->m_balance == SMALLER_HEAVY)) {
+                m_balance = BIGGER_HEAVY;
+            } else {
+                m_balance = m_bigger->m_balance + BIGGER_HEAVY;
+            }
+
+            m_bigger->m_balance = tmp + BIGGER_HEAVY - m_bigger->m_balance;
+        }
+
+        void rotate_to_bigger()
+        {
+            if (m_bigger->m_balance == SMALLER_HEAVY) {
+                m_bigger->rotate_to_smaller();
+            }
+            // Swap contents of this and m_bigger.
+            // The ownership of the head node is inaccessible so changing location is the only
+            // solution.
+            swap_contents(this, m_bigger.get());
+
+            // Move the subtrees to achieve BST property again.
+            std::swap(m_smaller, m_bigger);
+            std::swap(m_smaller->m_smaller, m_smaller->m_bigger);
+            std::swap(m_smaller->m_smaller, m_bigger);
+            if (m_bigger != nullptr) {
+                m_bigger->m_parent = this;
+            }
+            if (m_smaller->m_smaller != nullptr) {
+                m_smaller->m_smaller->m_parent = m_smaller.get();
+            }
+            if (m_smaller->m_bigger != nullptr) {
+                m_smaller->m_bigger->m_parent = m_smaller.get();
+            }
+
+            auto tmp = m_balance;
+            if ((m_balance == BIGGER_HEAVY) && (m_smaller->m_balance == BIGGER_HEAVY)) {
+                m_balance = SMALLER_HEAVY;
+            } else {
+                m_balance = m_smaller->m_balance + SMALLER_HEAVY;
+            }
+            m_smaller->m_balance = tmp + SMALLER_HEAVY - m_smaller->m_balance;
+        }
+
+        static void swap_contents(AVL_node* first, AVL_node* second)
+        {
+            std::swap(first->m_value, second->m_value);
+            std::swap(first->m_count, second->m_count);
         }
     };
 

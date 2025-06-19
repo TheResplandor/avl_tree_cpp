@@ -51,6 +51,13 @@ test_result test_visual_outcome()
         std::println("adding {}", chars1[i]);
         tree.add(chars1[i]);
         tree.print_tree();
+
+        auto err = tree.test_tree();
+        if (err != "") {
+            std::println("error in tree: {}", err);
+            return test_result(false, __func__);
+        }
+
         cout << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
                 "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
              << endl;
@@ -80,6 +87,13 @@ test_result test_visual_outcome()
         std::println("removing {}", chars1[i]);
         tree.remove(chars1[i]);
         tree.print_tree();
+
+        auto err = tree.test_tree();
+        if (err != "") {
+            std::println("error in tree: {}", err);
+            return test_result(false, __func__);
+        }
+
         cout << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
                 "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
              << endl;
@@ -96,23 +110,57 @@ test_result test_big_tree_visual()
             std::println("adding {}", i);
             tree.add(i);
             tree.print_tree();
+
+            auto err = tree.test_tree();
+            if (err != "") {
+                std::println("error in tree: {}", err);
+                return false;
+            }
+
             std::println("\n{0}{0}{0}{0}{0}{0}{0}{0}", "~~~~~~~~~~~~~~~~~");
         }
+        return true;
     };
     auto removal = [&tree](char first, char last) {
         for (char i = first; i <= last; ++i) {
             std::println("removing {}", i);
             tree.remove(i);
             tree.print_tree();
+
+            auto err = tree.test_tree();
+            if (err != "") {
+                std::println("error in tree: {}", err);
+                return false;
+            }
+
             std::println("\n{0}{0}{0}{0}{0}{0}{0}{0}", "~~~~~~~~~~~~~~~~~");
         }
+        return true;
     };
-    addition('a', 'z');
-    addition('A', 'Z');
-    addition('0', '9');
-    removal('a', 'z');
-    removal('A', 'Z');
-    removal('0', '9');
+    bool out = addition('a', 'z');
+    if (!out) {
+        return test_result(false, __func__);
+    }
+    out = addition('A', 'Z');
+    if (!out) {
+        return test_result(false, __func__);
+    }
+    out = addition('0', '9');
+    if (!out) {
+        return test_result(false, __func__);
+    }
+    out = removal('a', 'z');
+    if (!out) {
+        return test_result(false, __func__);
+    }
+    out = removal('A', 'Z');
+    if (!out) {
+        return test_result(false, __func__);
+    }
+    out = removal('0', '9');
+    if (!out) {
+        return test_result(false, __func__);
+    }
 
     return test_result(true, __func__);
 }

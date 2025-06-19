@@ -6,7 +6,6 @@ Purpose:    AVL_tree class declaration.
 #define AVL_TREE_H
 
 #include <algorithm>
-#include <cmath>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -14,6 +13,10 @@ Purpose:    AVL_tree class declaration.
 #include <memory>
 #include <utility>
 #include <vector>
+#ifdef DEBUG
+#include <expected>
+#include <string>
+#endif // ifdef DEBUG
 
 enum class avl_statuses {
     UNINITIALIZED = -1,
@@ -138,6 +141,7 @@ public:
         return m_head->find(value, nullptr) != nullptr;
     }
 
+#ifdef DEBUG
     /**
      * @brief Prints the tree to the console.
      *
@@ -154,6 +158,19 @@ public:
             std::cout << "\n";
         }
     }
+
+    std::string test_tree()
+    {
+        if (m_head == nullptr) {
+            return "";
+        }
+        auto test_out = m_head->test_subtree();
+        if (!test_out) {
+            return test_out.error();
+        }
+        return "";
+    }
+#endif // ifdef DEBUG
 
 private:
     enum class node_statuses {
@@ -247,6 +264,34 @@ private:
                 std::max(get_height(node->m_smaller.get()), get_height(node->m_bigger.get()));
         }
 
+        void rebalance_uptree(bool smaller_called, int8_t balance_change)
+        {
+            bool keep_rebalancing = ((m_balance == BALANCED) == (balance_change == 1));
+
+            if (smaller_called) {
+                m_balance += SMALLER_SIGN * balance_change;
+            } else {
+                // bigger child called.
+                m_balance += BIGGER_SIGN * balance_change;
+            }
+            auto parent = m_parent;
+
+            if (m_balance == SMALLER_UB) {
+                this->rotate_to_smaller();
+            } else if (m_balance == BIGGER_UB) {
+                this->rotate_to_bigger();
+            }
+
+            if (balance_change == -1) {
+                keep_rebalancing = keep_rebalancing && (m_balance == BALANCED);
+            }
+
+            if ((parent != nullptr) && keep_rebalancing) {
+                parent->rebalance_uptree(this == parent->m_smaller.get(), balance_change);
+            }
+        }
+
+#ifdef DEBUG
         node_statuses print_nth_depth(size_t depth, size_t height, bool is_empty = false)
         {
             const char FILLER_CHAR = ' ';
@@ -326,32 +371,57 @@ private:
             return node_statuses::SUCCESS;
         }
 
-        void rebalance_uptree(bool smaller_called, int8_t balance_change)
+        /**
+         * @brief
+         *
+         * @return height of subtree, message explaining why its not a valid tree. message is empty
+         * if it is a valid tree. value of height is only valid if message is empty (no error).
+         */
+        std::expected<size_t, std::string> test_subtree()
         {
-            bool keep_rebalancing = ((m_balance == BALANCED) == (balance_change == 1));
+            size_t height_smaller = 0;
+            size_t height_bigger = 0;
 
-            if (smaller_called) {
-                m_balance += SMALLER_SIGN * balance_change;
-            } else {
-                // bigger child called.
-                m_balance += BIGGER_SIGN * balance_change;
+            if (!((m_balance <= BIGGER_HEAVY) && (m_balance >= SMALLER_HEAVY))) {
+                return std::unexpected { "saved balance is: " + std::to_string(m_balance) };
             }
-            auto parent = m_parent;
-
-            if (m_balance == SMALLER_UB) {
-                this->rotate_to_smaller();
-            } else if (m_balance == BIGGER_UB) {
-                this->rotate_to_bigger();
+            if ((m_smaller == nullptr) && (m_bigger == nullptr)) {
+                return 1;
             }
 
-            if (balance_change == -1) {
-                keep_rebalancing = keep_rebalancing && (m_balance == BALANCED);
+            if (m_bigger != nullptr) {
+                if (m_value >= m_bigger->m_value) {
+                    return std::unexpected { "value >= bigger value" };
+                }
+
+                auto bigger_out = m_bigger->test_subtree();
+                if (!bigger_out) {
+                    return std::unexpected { bigger_out.error() };
+                }
+                height_bigger = *bigger_out;
             }
 
-            if ((parent != nullptr) && keep_rebalancing) {
-                parent->rebalance_uptree(this == parent->m_smaller.get(), balance_change);
+            if (m_smaller != nullptr) {
+                if (m_value <= m_smaller->m_value) {
+                    return std::unexpected { "value <= smaller_value" };
+                }
+
+                auto smaller_out = m_smaller->test_subtree();
+                if (!smaller_out) {
+                    return std::unexpected { smaller_out.error() };
+                }
+                height_smaller = *smaller_out;
             }
+
+            auto balance =
+                std::max(height_bigger, height_smaller) - std::min(height_smaller, height_bigger);
+            if (balance >= 2) {
+                return std::unexpected { "calculated balance is: " + std::to_string(balance) };
+            }
+
+            return std::max(height_bigger, height_smaller) + 1;
         }
+#endif // ifdef DEBUG
 
         std::unique_ptr<AVL_node> m_smaller = nullptr;
         std::unique_ptr<AVL_node> m_bigger = nullptr;

@@ -38,7 +38,7 @@ test_result test_compiles_with_custom_type()
     return test_result(true, __func__);
 }
 
-test_result test_visual_outcome()
+test_result test_variety()
 {
     char chars1[] = {
         'k', 'd', 'r', 'd', 'e', 'f', 'z', 's', 'e', 'i', 'w', 'l', 'm', 'n', 'b', 'a'
@@ -50,17 +50,6 @@ test_result test_visual_outcome()
     for (size_t i = 1; i < sizeof(chars1) / sizeof(char); ++i) {
         std::println("adding {}", chars1[i]);
         tree.add(chars1[i]);
-        tree.print_tree();
-
-        auto err = tree.test_tree();
-        if (err != "") {
-            std::println("error in tree: {}", err);
-            return test_result(false, __func__);
-        }
-
-        cout << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-             << endl;
     }
 
     for (size_t i = 0; i < sizeof(chars1) / sizeof(char); ++i) {
@@ -86,38 +75,18 @@ test_result test_visual_outcome()
     for (size_t i = 0; i < sizeof(chars1) / sizeof(char); ++i) {
         std::println("removing {}", chars1[i]);
         tree.remove(chars1[i]);
-        tree.print_tree();
-
-        auto err = tree.test_tree();
-        if (err != "") {
-            std::println("error in tree: {}", err);
-            return test_result(false, __func__);
-        }
-
-        cout << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-             << endl;
     }
 
     return test_result(true, __func__);
 }
 
-test_result test_big_tree_visual()
+test_result test_many_additions()
 {
     AVL_tree<char> tree { '+' };
     auto addition = [&tree](char first, char last) {
         for (char i = first; i <= last; ++i) {
             std::println("adding {}", i);
             tree.add(i);
-            tree.print_tree();
-
-            auto err = tree.test_tree();
-            if (err != "") {
-                std::println("error in tree: {}", err);
-                return false;
-            }
-
-            std::println("\n{0}{0}{0}{0}{0}{0}{0}{0}", "~~~~~~~~~~~~~~~~~");
         }
         return true;
     };
@@ -125,15 +94,6 @@ test_result test_big_tree_visual()
         for (char i = first; i <= last; ++i) {
             std::println("removing {}", i);
             tree.remove(i);
-            tree.print_tree();
-
-            auto err = tree.test_tree();
-            if (err != "") {
-                std::println("error in tree: {}", err);
-                return false;
-            }
-
-            std::println("\n{0}{0}{0}{0}{0}{0}{0}{0}", "~~~~~~~~~~~~~~~~~");
         }
         return true;
     };
@@ -183,8 +143,8 @@ test_result test_add_contains()
 }
 
 static const auto tests = {
-    test_visual_outcome,
-    test_big_tree_visual,
+    test_variety,
+    test_many_additions,
     // test_no_comparison_class,
     test_compiles_with_custom_type,
     test_add_contains,

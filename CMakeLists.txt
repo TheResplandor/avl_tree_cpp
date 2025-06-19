@@ -12,5 +12,8 @@ endif()
 set(APP_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${APP_ROOT_DIR})
 
-add_executable(${PROJECT_NAME} test.cpp AVL_tree.hpp)
-target_compile_definitions(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:DEBUG _DEBUG>)
+add_executable(test_debug test.cpp AVL_tree.hpp)
+target_compile_definitions(test_debug PRIVATE $<$<CONFIG:Debug>:DEBUG _DEBUG>)
+
+add_executable(test_release test_release.cpp AVL_tree.hpp)
+target_compile_definitions(test_release PRIVATE $<$<CONFIG:Release>:RELEASE _RELEASE>)

@@ -361,10 +361,10 @@ private:
         int8_t m_balance;
 
     private:
-        void rotate_to_smaller()
+        void rotate_to_smaller(bool is_first_rotation = true)
         {
-            if (m_smaller->m_balance == BIGGER_HEAVY) {
-                m_smaller->rotate_to_bigger();
+            if ((m_smaller->m_balance == BIGGER_HEAVY) && (is_first_rotation)) {
+                m_smaller->rotate_to_bigger(false);
             }
             // Swap contents of this and m_bigger.
             // The ownership of the head node is inaccessible so changing location is the only
@@ -386,19 +386,25 @@ private:
             }
 
             auto tmp = m_balance;
-            if ((m_balance == SMALLER_HEAVY) && (m_bigger->m_balance == SMALLER_HEAVY)) {
+            if ((tmp == SMALLER_HEAVY) && (m_bigger->m_balance == SMALLER_HEAVY)) {
                 m_balance = BIGGER_HEAVY;
+            } else if ((tmp == SMALLER_UB) && (m_bigger->m_balance == SMALLER_UB)) {
+                m_balance = BALANCED;
             } else {
                 m_balance = m_bigger->m_balance + BIGGER_HEAVY;
             }
 
-            m_bigger->m_balance = tmp + BIGGER_HEAVY - m_bigger->m_balance;
+            if ((tmp == SMALLER_HEAVY) && (m_bigger->m_balance == BIGGER_HEAVY)) {
+                m_bigger->m_balance = BALANCED;
+            } else {
+                m_bigger->m_balance = tmp + BIGGER_HEAVY - m_bigger->m_balance;
+            }
         }
 
-        void rotate_to_bigger()
+        void rotate_to_bigger(bool is_first_rotation = true)
         {
-            if (m_bigger->m_balance == SMALLER_HEAVY) {
-                m_bigger->rotate_to_smaller();
+            if ((m_bigger->m_balance == SMALLER_HEAVY) && (is_first_rotation)) {
+                m_bigger->rotate_to_smaller(false);
             }
             // Swap contents of this and m_bigger.
             // The ownership of the head node is inaccessible so changing location is the only
@@ -420,12 +426,19 @@ private:
             }
 
             auto tmp = m_balance;
-            if ((m_balance == BIGGER_HEAVY) && (m_smaller->m_balance == BIGGER_HEAVY)) {
+            if ((tmp == BIGGER_HEAVY) && (m_smaller->m_balance == BIGGER_HEAVY)) {
                 m_balance = SMALLER_HEAVY;
+            } else if ((tmp == BIGGER_UB) && (m_smaller->m_balance == BIGGER_UB)) {
+                m_balance = BALANCED;
             } else {
                 m_balance = m_smaller->m_balance + SMALLER_HEAVY;
             }
-            m_smaller->m_balance = tmp + SMALLER_HEAVY - m_smaller->m_balance;
+
+            if ((tmp == BIGGER_HEAVY) && (m_smaller->m_balance == SMALLER_HEAVY)) {
+                m_smaller->m_balance = BALANCED;
+            } else {
+                m_smaller->m_balance = tmp + SMALLER_HEAVY - m_smaller->m_balance;
+            }
         }
 
         static void swap_contents(AVL_node* first, AVL_node* second)

@@ -372,7 +372,7 @@ private:
         }
 
         /**
-         * @brief
+         * @brief Tests if the tree starting at current node is a valid AVL tree.
          *
          * @return height of subtree, message explaining why its not a valid tree. message is empty
          * if it is a valid tree. value of height is only valid if message is empty (no error).
@@ -386,6 +386,10 @@ private:
                 return std::unexpected { "saved balance is: " + std::to_string(m_balance) };
             }
             if ((m_smaller == nullptr) && (m_bigger == nullptr)) {
+                if (m_balance != BALANCED) {
+                    return std::unexpected { "leaf node with balance: " +
+                        std::to_string(m_balance) };
+                }
                 return 1;
             }
 
@@ -413,10 +417,10 @@ private:
                 height_smaller = *smaller_out;
             }
 
-            auto balance =
-                std::max(height_bigger, height_smaller) - std::min(height_smaller, height_bigger);
-            if (balance >= 2) {
-                return std::unexpected { "calculated balance is: " + std::to_string(balance) };
+            auto balance = height_bigger - height_smaller;
+            if (balance != m_balance) {
+                return std::unexpected { "calculated balance differs from saved balance: " +
+                    std::to_string(balance) + " != " + std::to_string(m_balance) };
             }
 
             return std::max(height_bigger, height_smaller) + 1;
